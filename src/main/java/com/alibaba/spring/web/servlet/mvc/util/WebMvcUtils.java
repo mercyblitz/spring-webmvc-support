@@ -168,8 +168,7 @@ public abstract class WebMvcUtils {
      *
      * @param request        {@link HttpServletRequest}
      * @param servletContext {@link ServletContext}
-     * @return {@link WebApplicationContext}
-     * @throws <code>null</code> if no servlet-specific context has been found
+     * @return {@link WebApplicationContext} , or <code>null</code> if no servlet-specific context has been found
      * @see RequestContextUtils#getWebApplicationContext(ServletRequest)
      * @see DispatcherServlet#WEB_APPLICATION_CONTEXT_ATTRIBUTE
      */
