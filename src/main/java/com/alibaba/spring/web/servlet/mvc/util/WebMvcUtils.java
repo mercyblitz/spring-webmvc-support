@@ -74,11 +74,17 @@ public abstract class WebMvcUtils {
     private static final String INIT_PARAM_DELIMITERS = ",; \t\n";
 
     /**
-     * RequestContextUtils#findWebApplicationContext(HttpServletRequest, ServletContext) method
-     *
-     * @since Spring 4.2.1
+     * RequestContextUtils#findWebApplicationContext(HttpServletRequest, ServletContext) method since Spring Framework 4.2.1
      */
     private static final Method findWebApplicationContextMethod;
+
+    /**
+     * RequestContextUtils#getWebApplicationContext(HttpServletRequest, ServletContext) method that will be removed
+     * since Spring Framework 5.0
+     *
+     * @since 1.0.1
+     */
+    private static final Method getWebApplicationContextMethod;
 
 
     static {
@@ -86,6 +92,8 @@ public abstract class WebMvcUtils {
         findWebApplicationContextMethod = findMethod(RequestContextUtils.class,
                 "findWebApplicationContext", HttpServletRequest.class, ServletContext.class);
 
+        getWebApplicationContextMethod = findMethod(RequestContextUtils.class,
+                "getWebApplicationContext", ServletRequest.class, ServletContext.class);
     }
 
 //    /**
@@ -161,7 +169,7 @@ public abstract class WebMvcUtils {
      * @param request        {@link HttpServletRequest}
      * @param servletContext {@link ServletContext}
      * @return {@link WebApplicationContext}
-     * @throws IllegalStateException if no servlet-specific context has been found
+     * @throws <code>null</code> if no servlet-specific context has been found
      * @see RequestContextUtils#getWebApplicationContext(ServletRequest)
      * @see DispatcherServlet#WEB_APPLICATION_CONTEXT_ATTRIBUTE
      */
@@ -170,22 +178,15 @@ public abstract class WebMvcUtils {
         WebApplicationContext webApplicationContext = null;
 
         if (findWebApplicationContextMethod != null) {
-
-            try {
-
-                webApplicationContext = (WebApplicationContext)
-                        invokeMethod(findWebApplicationContextMethod, null, request, servletContext);
-
-            } catch (IllegalStateException e) {
-
-            }
-
+            webApplicationContext = (WebApplicationContext) invokeMethod(findWebApplicationContextMethod, null, request, servletContext);
         }
 
-        if (webApplicationContext == null) {
-
-            webApplicationContext = RequestContextUtils.getWebApplicationContext(request, servletContext);
-
+        if (webApplicationContext == null && getWebApplicationContextMethod != null) {
+            try {
+                webApplicationContext = (WebApplicationContext) invokeMethod(getWebApplicationContextMethod, null, request, servletContext);
+            } catch (IllegalStateException e) {
+                // ignore
+            }
         }
 
         return webApplicationContext;

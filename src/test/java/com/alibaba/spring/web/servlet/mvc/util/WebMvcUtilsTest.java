@@ -23,6 +23,18 @@ import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandl
 import javax.servlet.ServletContext;
 import javax.servlet.http.HttpServletRequest;
 
+import static com.alibaba.spring.web.servlet.mvc.util.WebMvcUtils.appendContextInitializerClassInitParameter;
+import static com.alibaba.spring.web.servlet.mvc.util.WebMvcUtils.appendGlobalInitializerClassInitParameter;
+import static com.alibaba.spring.web.servlet.mvc.util.WebMvcUtils.appendInitParameter;
+import static com.alibaba.spring.web.servlet.mvc.util.WebMvcUtils.appendInitParameters;
+import static com.alibaba.spring.web.servlet.mvc.util.WebMvcUtils.currentRequest;
+import static com.alibaba.spring.web.servlet.mvc.util.WebMvcUtils.currentServletContext;
+import static com.alibaba.spring.web.servlet.mvc.util.WebMvcUtils.currentWebApplicationContext;
+import static com.alibaba.spring.web.servlet.mvc.util.WebMvcUtils.getRequestMappingHandlerMapping;
+import static com.alibaba.spring.web.servlet.mvc.util.WebMvcUtils.getWebApplicationContext;
+import static com.alibaba.spring.web.servlet.mvc.util.WebMvcUtils.isControllerAdviceBeanType;
+import static com.alibaba.spring.web.servlet.mvc.util.WebMvcUtils.isPageRenderRequest;
+import static org.junit.Assert.assertNull;
 import static org.springframework.web.context.ContextLoader.CONTEXT_INITIALIZER_CLASSES_PARAM;
 import static org.springframework.web.context.ContextLoader.GLOBAL_INITIALIZER_CLASSES_PARAM;
 import static org.springframework.web.context.WebApplicationContext.ROOT_WEB_APPLICATION_CONTEXT_ATTRIBUTE;
@@ -55,9 +67,9 @@ public class WebMvcUtilsTest {
     @Test
     public void testIsControllerAdviceBeanType() {
 
-        Assert.assertFalse(WebMvcUtils.isControllerAdviceBeanType(WebMvcUtils.class));
+        Assert.assertFalse(isControllerAdviceBeanType(WebMvcUtils.class));
 
-        Assert.assertTrue(WebMvcUtils.isControllerAdviceBeanType(WebMvcUtilsTest.class));
+        Assert.assertTrue(isControllerAdviceBeanType(WebMvcUtilsTest.class));
 
     }
 
@@ -70,7 +82,7 @@ public class WebMvcUtilsTest {
 
         RequestContextHolder.setRequestAttributes(requestAttributes);
 
-        HttpServletRequest httpServletRequest = WebMvcUtils.currentRequest();
+        HttpServletRequest httpServletRequest = currentRequest();
 
         Assert.assertEquals(request, httpServletRequest);
 
@@ -78,9 +90,7 @@ public class WebMvcUtilsTest {
 
     @Test(expected = IllegalStateException.class)
     public void testCurrentRequestWithoutRequestAttributes() {
-
-        WebMvcUtils.currentRequest();
-
+        currentRequest();
     }
 
     @Test(expected = IllegalStateException.class)
@@ -130,7 +140,7 @@ public class WebMvcUtilsTest {
 
         });
 
-        WebMvcUtils.currentRequest();
+        currentRequest();
 
 
     }
@@ -144,7 +154,7 @@ public class WebMvcUtilsTest {
 
         RequestContextHolder.setRequestAttributes(requestAttributes);
 
-        ServletContext servletContext = WebMvcUtils.currentServletContext();
+        ServletContext servletContext = currentServletContext();
 
         Assert.assertNotNull(servletContext);
 
@@ -154,7 +164,7 @@ public class WebMvcUtilsTest {
 
         RequestContextHolder.setRequestAttributes(requestAttributes);
 
-        servletContext = WebMvcUtils.currentServletContext();
+        servletContext = currentServletContext();
 
         Assert.assertNotNull(servletContext);
 
@@ -163,11 +173,11 @@ public class WebMvcUtilsTest {
     @Test
     public void testAppendInitParameter() {
 
-        String parameterValue = WebMvcUtils.appendInitParameter("value1");
+        String parameterValue = appendInitParameter("value1");
 
         Assert.assertEquals("value1", parameterValue);
 
-        parameterValue = WebMvcUtils.appendInitParameter("value1", "value2");
+        parameterValue = appendInitParameter("value1", "value2");
 
         Assert.assertEquals("value1,value2", parameterValue);
 
@@ -182,13 +192,13 @@ public class WebMvcUtilsTest {
 
         String parameterValue = "value";
 
-        Assert.assertNull(servletContext.getInitParameter(parameterName));
+        assertNull(servletContext.getInitParameter(parameterName));
 
-        WebMvcUtils.appendInitParameters(servletContext, parameterName);
+        appendInitParameters(servletContext, parameterName);
 
-        Assert.assertNull(servletContext.getInitParameter(parameterName));
+        assertNull(servletContext.getInitParameter(parameterName));
 
-        WebMvcUtils.appendInitParameters(servletContext, parameterName, parameterValue, parameterValue);
+        appendInitParameters(servletContext, parameterName, parameterValue, parameterValue);
 
         Assert.assertEquals("value,value", servletContext.getInitParameter(parameterName));
 
@@ -199,7 +209,7 @@ public class WebMvcUtilsTest {
 
         MockServletContext servletContext = new MockServletContext();
 
-        WebMvcUtils.appendGlobalInitializerClassInitParameter(servletContext, ApplicationContextInitializer.class);
+        appendGlobalInitializerClassInitParameter(servletContext, ApplicationContextInitializer.class);
 
         Assert.assertEquals(ApplicationContextInitializer.class.getName(),
                 servletContext.getInitParameter(GLOBAL_INITIALIZER_CLASSES_PARAM));
@@ -211,52 +221,36 @@ public class WebMvcUtilsTest {
 
         MockServletContext servletContext = new MockServletContext();
 
-        WebMvcUtils.appendContextInitializerClassInitParameter(servletContext, ApplicationContextInitializer.class);
+        appendContextInitializerClassInitParameter(servletContext, ApplicationContextInitializer.class);
 
         Assert.assertEquals(ApplicationContextInitializer.class.getName(),
                 servletContext.getInitParameter(CONTEXT_INITIALIZER_CLASSES_PARAM));
 
     }
 
-//    @Test
-//    public void testAppendFrameworkServletContextInitializerClassInitParameter() {
-//
-//        MockServletContext servletContext = new MockServletContext();
-//
-//        WebMvcUtils.appendFrameworkServletContextInitializerClassInitParameter(servletContext, ApplicationContextInitializer.class);
-//
-//        Assert.assertEquals(ApplicationContextInitializer.class.getName(),
-//                servletContext.getInitParameter(GLOBAL_INITIALIZER_CLASSES_PARAM));
-//
-//    }
-
     @Test
     public void testIsPageRenderRequest() {
 
-        Assert.assertFalse(WebMvcUtils.isPageRenderRequest(null));
+        Assert.assertFalse(isPageRenderRequest(null));
 
         ModelAndView modelAndView = new ModelAndView();
 
-        Assert.assertFalse(WebMvcUtils.isPageRenderRequest(modelAndView));
+        Assert.assertFalse(isPageRenderRequest(modelAndView));
 
         modelAndView.setViewName("hello");
 
-        Assert.assertTrue(WebMvcUtils.isPageRenderRequest(modelAndView));
+        Assert.assertTrue(isPageRenderRequest(modelAndView));
 
     }
 
-    @Test(expected = IllegalStateException.class)
+    @Test
     public void testGetWebApplicationContextWithoutServletContext() {
-
-        WebMvcUtils.getWebApplicationContext(request, null);
-
+        assertNull(getWebApplicationContext(request, null));
     }
 
-    @Test(expected = IllegalStateException.class)
+    @Test
     public void testGetWebApplicationContextWithoutWebApplicationContext() {
-
-        WebMvcUtils.getWebApplicationContext(request, servletContext);
-
+        assertNull(getWebApplicationContext(request, servletContext));
     }
 
     @Test
@@ -266,11 +260,11 @@ public class WebMvcUtilsTest {
 
         request.setAttribute(DispatcherServlet.WEB_APPLICATION_CONTEXT_ATTRIBUTE, webApplicationContext);
 
-        WebApplicationContext applicationContext = WebMvcUtils.getWebApplicationContext(request, servletContext);
+        WebApplicationContext applicationContext = getWebApplicationContext(request, servletContext);
 
         Assert.assertEquals(webApplicationContext, applicationContext);
 
-        applicationContext = WebMvcUtils.getWebApplicationContext(request);
+        applicationContext = getWebApplicationContext(request);
 
         Assert.assertEquals(webApplicationContext, applicationContext);
 
@@ -285,7 +279,7 @@ public class WebMvcUtilsTest {
 
         servletContext.setAttribute(ROOT_WEB_APPLICATION_CONTEXT_ATTRIBUTE, webApplicationContext);
 
-        WebApplicationContext applicationContext = WebMvcUtils.currentWebApplicationContext();
+        WebApplicationContext applicationContext = currentWebApplicationContext();
 
         Assert.assertEquals(webApplicationContext, applicationContext);
 
@@ -308,15 +302,13 @@ public class WebMvcUtilsTest {
 
         request.setAttribute(DispatcherServlet.WEB_APPLICATION_CONTEXT_ATTRIBUTE, webApplicationContext);
 
-        RequestMappingHandlerMapping requestMappingHandlerMapping =
-                WebMvcUtils.getRequestMappingHandlerMapping(request, servletContext);
+        RequestMappingHandlerMapping requestMappingHandlerMapping = getRequestMappingHandlerMapping(request, servletContext);
 
         Assert.assertNotNull(requestMappingHandlerMapping);
 
         Assert.assertFalse(requestMappingHandlerMapping.getHandlerMethods().isEmpty());
 
-        requestMappingHandlerMapping =
-                WebMvcUtils.getRequestMappingHandlerMapping(request);
+        requestMappingHandlerMapping = getRequestMappingHandlerMapping(request);
 
         Assert.assertNotNull(requestMappingHandlerMapping);
 

@@ -1,10 +1,10 @@
 package com.alibaba.spring.web.servlet.config.annotation;
 
-import com.alibaba.spring.util.FieldUtils;
 import org.junit.Assert;
 import org.junit.Test;
 import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockServletContext;
+import org.springframework.util.ReflectionUtils;
 import org.springframework.web.accept.ContentNegotiationManagerFactoryBean;
 import org.springframework.web.servlet.config.annotation.ContentNegotiationConfigurer;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
@@ -12,7 +12,12 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 import java.util.HashMap;
 import java.util.Map;
 
-import static org.springframework.http.MediaType.*;
+import static com.alibaba.spring.util.FieldUtils.getFieldValue;
+import static org.springframework.http.MediaType.APPLICATION_JSON_VALUE;
+import static org.springframework.http.MediaType.APPLICATION_XML_VALUE;
+import static org.springframework.http.MediaType.IMAGE_GIF_VALUE;
+import static org.springframework.http.MediaType.IMAGE_JPEG_VALUE;
+import static org.springframework.http.MediaType.TEXT_HTML_VALUE;
 
 /**
  * {@link ConfigurableContentNegotiationManagerWebMvcConfigurer} Test
@@ -34,16 +39,15 @@ public class ConfigurableContentNegotiationManagerWebMvcConfigurerTest {
 
         webMvcConfigurer.configureContentNegotiation(configurer);
 
-        ContentNegotiationManagerFactoryBean factoryBean =
-                FieldUtils.getFieldValue(configurer, "factory", ContentNegotiationManagerFactoryBean.class);
+        ContentNegotiationManagerFactoryBean factoryBean = getContentNegotiationManagerFactoryBean(configurer);
 
-        Assert.assertTrue(FieldUtils.getFieldValue(factoryBean, "favorPathExtension", boolean.class));
-        Assert.assertFalse(FieldUtils.getFieldValue(factoryBean, "favorParameter", boolean.class));
-        Assert.assertFalse(FieldUtils.getFieldValue(factoryBean, "ignoreAcceptHeader", boolean.class));
-        Assert.assertNull(FieldUtils.getFieldValue(factoryBean, "useJaf", Boolean.class));
-        Assert.assertEquals("format", FieldUtils.getFieldValue(factoryBean, "parameterName", String.class));
-        Assert.assertTrue(FieldUtils.getFieldValue(factoryBean, "mediaTypes", Map.class).isEmpty());
-        Assert.assertNull(FieldUtils.getFieldValue(factoryBean, "defaultContentType", MediaType.class));
+        Assert.assertTrue(getFieldValue(factoryBean, "favorPathExtension", boolean.class));
+        Assert.assertFalse(getFieldValue(factoryBean, "favorParameter", boolean.class));
+        Assert.assertFalse(getFieldValue(factoryBean, "ignoreAcceptHeader", boolean.class));
+        Assert.assertNull(getFieldValue(factoryBean, "useJaf", Boolean.class));
+        Assert.assertEquals("format", getFieldValue(factoryBean, "parameterName", String.class));
+        Assert.assertTrue(getFieldValue(factoryBean, "mediaTypes", Map.class).isEmpty());
+        Assert.assertNull(getFieldValue(factoryBean, "defaultContentType", MediaType.class));
 
     }
 
@@ -69,19 +73,32 @@ public class ConfigurableContentNegotiationManagerWebMvcConfigurerTest {
 
         ContentNegotiationConfigurer configurer = new ContentNegotiationConfigurer(new MockServletContext());
 
-        ContentNegotiationManagerFactoryBean factoryBean =
-                FieldUtils.getFieldValue(configurer, "factory", ContentNegotiationManagerFactoryBean.class);
+        ContentNegotiationManagerFactoryBean factoryBean = getContentNegotiationManagerFactoryBean(configurer);
 
         webMvcConfigurer.configureContentNegotiation(configurer);
 
+        Assert.assertFalse(getFieldValue(factoryBean, "favorPathExtension", boolean.class));
+        Assert.assertTrue(getFieldValue(factoryBean, "favorParameter", boolean.class));
+        Assert.assertTrue(getFieldValue(factoryBean, "ignoreAcceptHeader", boolean.class));
 
-        Assert.assertFalse(FieldUtils.getFieldValue(factoryBean, "favorPathExtension", boolean.class));
-        Assert.assertTrue(FieldUtils.getFieldValue(factoryBean, "favorParameter", boolean.class));
-        Assert.assertTrue(FieldUtils.getFieldValue(factoryBean, "ignoreAcceptHeader", boolean.class));
-        Assert.assertTrue(FieldUtils.getFieldValue(factoryBean, "useJaf", Boolean.class));
-        Assert.assertEquals("test-format", FieldUtils.getFieldValue(factoryBean, "parameterName", String.class));
+        // "userJaf" field is removed since Spring Framework 5.0
+        if (ReflectionUtils.findField(factoryBean.getClass(), "userJaf", Boolean.class) != null) {
+            Assert.assertTrue(getFieldValue(factoryBean, "useJaf", Boolean.class));
+        }
 
-        Map<String, MediaType> mediaTypesMap = FieldUtils.getFieldValue(factoryBean, "mediaTypes", Map.class);
+        // "ignoreUnknownPathExtensions" field in introduced since Spring Framework 5.0
+        if (ReflectionUtils.findField(factoryBean.getClass(), "ignoreUnknownPathExtensions", boolean.class) != null) {
+            Assert.assertTrue(getFieldValue(factoryBean, "ignoreUnknownPathExtensions", boolean.class));
+        }
+
+        // "useRegisteredExtensionsOnly" field in introduced since Spring Framework 5.0
+        if (ReflectionUtils.findField(factoryBean.getClass(), "useRegisteredExtensionsOnly", Boolean.class) != null) {
+            Assert.assertFalse(getFieldValue(factoryBean, "useRegisteredExtensionsOnly", Boolean.class));
+        }
+
+        Assert.assertEquals("test-format", getFieldValue(factoryBean, "parameterName", String.class));
+
+        Map<String, MediaType> mediaTypesMap = getFieldValue(factoryBean, "mediaTypes", Map.class);
 
         Assert.assertEquals("html", mediaTypesMap.get("html").getSubtype());
         Assert.assertEquals("xml", mediaTypesMap.get("xml").getSubtype());
@@ -90,5 +107,17 @@ public class ConfigurableContentNegotiationManagerWebMvcConfigurerTest {
         Assert.assertEquals("jpeg", mediaTypesMap.get("jpeg").getSubtype());
 
     }
+
+    private ContentNegotiationManagerFactoryBean getContentNegotiationManagerFactoryBean(ContentNegotiationConfigurer configurer) {
+
+        ContentNegotiationManagerFactoryBean factoryBean = getFieldValue(configurer, "factory", ContentNegotiationManagerFactoryBean.class);
+
+        if (factoryBean == null) {
+            factoryBean = getFieldValue(configurer, "factoryBean", ContentNegotiationManagerFactoryBean.class);
+        }
+
+        return factoryBean;
+    }
+
 
 }
